@@ -1,6 +1,6 @@
 # Beerobot
 
-- A worker that delete all slack messages with text from a specific channel.
+- A slack bot that delete all messages with text from a specific channel.
 
 ## Requirements
 
