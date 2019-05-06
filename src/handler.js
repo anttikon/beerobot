@@ -1,5 +1,5 @@
-const aws = require('aws-sdk')
-const sqs = new aws.SQS({ apiVersion: '2012-11-05' })
+const Lambda = require('aws-sdk/clients/lambda')
+const lambda = new Lambda()
 const { getParameters } = require('./utils')
 
 const isMessagePostedToConfiguredChannel = (slackEvent, configuredSlackChannelId) => !!slackEvent && !!slackEvent.event && slackEvent.event.channel === configuredSlackChannelId
@@ -14,19 +14,28 @@ const createResponse = (json) => ({
 async function handleRequest(slackEvent) {
   console.log(`user: ${slackEvent.event.user}, ts: ${slackEvent.event.ts}`)
 
-  const { SLACK_CHANNEL, SLACK_EVENT_TOKEN, SQS_URL } = await getParameters('SLACK_CHANNEL', 'SLACK_EVENT_TOKEN', 'SQS_URL')
+  const { BEEROBOT_SLACK_DELETE_LAMBDA, BEEROBOT_SLACK_CHANNEL, BEEROBOT_SLACK_EVENT_TOKEN } = await getParameters('BEEROBOT_SLACK_DELETE_LAMBDA', 'BEEROBOT_SLACK_CHANNEL', 'BEEROBOT_SLACK_EVENT_TOKEN')
 
-  if (slackEvent.token !== SLACK_EVENT_TOKEN) {
+  if (!BEEROBOT_SLACK_CHANNEL) {
+    throw new Error('Missing BEEROBOT_SLACK_CHANNEL')
+  } else if (!BEEROBOT_SLACK_DELETE_LAMBDA) {
+    throw new Error('Missing BEEROBOT_SLACK_DELETE_LAMBDA')
+  }
+
+  if (slackEvent.token !== BEEROBOT_SLACK_EVENT_TOKEN) {
     return false
   }
 
-  const shouldRemoveMessage = isMessagePostedToConfiguredChannel(slackEvent, SLACK_CHANNEL) && messageContainsText(slackEvent)
+  const shouldRemoveMessage = isMessagePostedToConfiguredChannel(slackEvent, BEEROBOT_SLACK_CHANNEL) && messageContainsText(slackEvent)
 
   if (shouldRemoveMessage) {
-    await sqs.sendMessage({
-      MessageBody: JSON.stringify({ ts: slackEvent.event.ts }),
-      QueueUrl: SQS_URL
-    }).promise()
+    const params = {
+      FunctionName: BEEROBOT_SLACK_DELETE_LAMBDA,
+      InvocationType: 'Event',
+      LogType: 'None',
+      Payload: JSON.stringify({ ts: slackEvent.event.ts })
+    }
+    await lambda.invoke(params).promise()
   }
   return true
 }

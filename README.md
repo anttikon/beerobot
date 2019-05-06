@@ -4,5 +4,6 @@
 
 ## Requirements
 
-- process.env.SLACK_TOKEN - slack token starting with xoxp
-- process.env.SLACK_CHANNEL - slack channel id
+- process.env.BEEROBOT_SLACK_EVENT_TOKEN - slack token to verify request
+- process.env.BEEROBOT_SLACK_TOKEN - slack token starting with xoxp
+- process.env.BEEROBOT_SLACK_CHANNEL - slack channel id
